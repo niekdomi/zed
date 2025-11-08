@@ -114,14 +114,6 @@ impl EditPredictionProvider for SupermavenCompletionProvider {
     }
 
     fn show_completions_in_menu() -> bool {
-        true
-    }
-
-    fn show_tab_accept_marker() -> bool {
-        true
-    }
-
-    fn supports_jump_to_edit() -> bool {
         false
     }
 
@@ -130,7 +122,7 @@ impl EditPredictionProvider for SupermavenCompletionProvider {
     }
 
     fn is_refreshing(&self) -> bool {
-        self.pending_refresh.is_some() && self.completion_id.is_none()
+        self.pending_refresh.is_some()
     }
 
     fn refresh(

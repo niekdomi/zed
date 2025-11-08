@@ -7933,14 +7933,8 @@ impl Editor {
         } else {
             None
         };
-        let supports_jump = self
-            .edit_prediction_provider
-            .as_ref()
-            .map(|provider| provider.provider.supports_jump_to_edit())
-            .unwrap_or(true);
-
-        let is_move = supports_jump
-            && (move_invalidation_row_range.is_some() || self.edit_predictions_hidden_for_vim_mode);
+        let is_move =
+            move_invalidation_row_range.is_some() || self.edit_predictions_hidden_for_vim_mode;
         let completion = if is_move {
             invalidation_row_range =
                 move_invalidation_row_range.unwrap_or(edit_start_row..edit_end_row);
@@ -9284,18 +9278,6 @@ impl Editor {
         let editor_bg_color = cx.theme().colors().editor_background;
         editor_bg_color.blend(accent_color.opacity(0.6))
     }
-    fn get_prediction_provider_icon_name(
-        provider: &Option<RegisteredEditPredictionProvider>,
-    ) -> IconName {
-        match provider {
-            Some(provider) => match provider.provider.name() {
-                "copilot" => IconName::Copilot,
-                "supermaven" => IconName::Supermaven,
-                _ => IconName::ZedPredict,
-            },
-            None => IconName::ZedPredict,
-        }
-    }
 
     fn render_edit_prediction_cursor_popover(
         &self,
@@ -9308,12 +9290,15 @@ impl Editor {
         cx: &mut Context<Editor>,
     ) -> Option<AnyElement> {
         let provider = self.edit_prediction_provider.as_ref()?;
-        let provider_icon = Self::get_prediction_provider_icon_name(&self.edit_prediction_provider);
 
-        let is_refreshing = provider.provider.is_refreshing(cx);
+       let is_refreshing = provider.provider.is_refreshing(cx);
 
-        fn pending_completion_container(icon: IconName) -> Div {
-            h_flex().h_full().flex_1().gap_2().child(Icon::new(icon))
+        fn pending_completion_container() -> Div {
+            h_flex()
+                .h_full()
+                .flex_1()
+                .gap_2()
+                .child(Icon::new(IconName::ZedPredict))
         }
 
         let completion = match &self.active_edit_prediction {
@@ -9414,15 +9399,15 @@ impl Editor {
                     cx,
                 )?,
 
-                None => pending_completion_container(provider_icon)
-                    .child(Label::new("...").size(LabelSize::Small)),
+                None => {
+                    pending_completion_container().child(Label::new("...").size(LabelSize::Small))
+                }
             },
 
-            None => pending_completion_container(provider_icon)
-                .child(Label::new("...").size(LabelSize::Small)),
+            None => pending_completion_container().child(Label::new("No Prediction")),
         };
 
-        let completion = if is_refreshing || self.active_edit_prediction.is_none() {
+        let completion = if is_refreshing {
             completion
                 .with_animation(
                     "loading-completion",
@@ -9522,12 +9507,6 @@ impl Editor {
                 .child(Icon::new(arrow).color(Color::Muted).size(IconSize::Small))
         }
 
-        let supports_jump = self
-            .edit_prediction_provider
-            .as_ref()
-            .map(|provider| provider.provider.supports_jump_to_edit())
-            .unwrap_or(true);
-
         match &completion.completion {
             EditPrediction::MoveWithin {
                 target, snapshot, ..
@@ -9590,13 +9569,11 @@ impl Editor {
                     .child(styled_text)
                     .when(has_more_lines, |parent| parent.child("…"));
 
-                let left = if supports_jump && first_edit_row != cursor_point.row {
+                let left = if first_edit_row != cursor_point.row {
                     render_relative_row_jump("", cursor_point.row, first_edit_row)
                         .into_any_element()
                 } else {
-                    let icon_name =
-                        Editor::get_prediction_provider_icon_name(&self.edit_prediction_provider);
-                    Icon::new(icon_name).into_any_element()
+                    Icon::new(IconName::ZedPredict).into_any_element()
                 };
 
                 Some(
